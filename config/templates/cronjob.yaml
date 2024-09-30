@@ -1,0 +1,55 @@
+{{ range $path, $_ :=  .Files.Glob  "rules/**.yaml" }}
+{{ $cfg := $.Files.Get $path | fromYaml }}
+{{- if eq $cfg.enabled true }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $cfg.name }}
+spec:
+  timeZone: "Etc/UTC"
+  schedule: {{ $cfg.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ $.Values.container.name }}
+            imagePullPolicy: Always
+            image: {{ $.Values.container.image }}
+            volumeMounts:
+            - name: rule-volume
+              mountPath: /app/rule
+            - name: config-volume
+              mountPath: /app/config
+            - name: exclusion-volume
+              mountPath: /app/exclusion
+            args:
+              - "--rule-config"
+              - "/app/rule/{{ $cfg.name }}.yaml"
+              - "--global-config"
+              - "/app/config/global_config.yaml"
+            env:
+            - name: OPENSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: OSPASSWORD
+                  name: {{ $.Release.Name }}-secret
+            # - name: LLM_API_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       key: llmApiKey
+            #       name: {{ $.Release.Name }}-secret
+          volumes:
+          - name: rule-volume
+            configMap:
+              name: "{{ $cfg.name }}-config"
+          - name: config-volume
+            configMap:
+              name: "global-config"
+          - name: exclusion-volume
+            configMap:
+              name: "{{ $cfg.name }}-exclusion"
+          restartPolicy: OnFailure
+{{ end }}
+{{ end }}

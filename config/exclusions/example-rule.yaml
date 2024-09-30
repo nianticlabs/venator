@@ -1,0 +1,68 @@
+# Known false positive for test user from internal IP
+- conditions:
+    and:
+      - field: username
+        operator: equals
+        value: "test"
+      - field: ip_address
+        operator: equals
+        value: "192.168.1.1"
+
+# Excluded based on email domain or internal domain
+- conditions:
+    or:
+      - field: email
+        operator: contains
+        value: "@example.com"
+      - field: domain
+        operator: equals
+        value: "internal.local"
+
+# Exclude fast responses
+- conditions:
+    and:
+      - field: response_time
+        operator: equals
+        value: "fast"
+
+# Exclude admin and superuser roles
+- conditions:
+    or:
+      - field: user_role
+        operator: equals
+        value: "admin"
+      - field: user_role
+        operator: equals
+        value: "superuser"
+
+# Exclude example.com URLs (including subdomains)
+- conditions:
+    or:
+      - field: url
+        operator: regex
+        value: "^https?://(?:[a-z0-9]+\\.)*example\\.com/.*$"
+
+# Exclude departments in sales or hr
+- conditions:
+    or:
+      - field: department
+        operator: in
+        values:
+          - "sales"
+          - "hr"
+
+# Exclude status not equals to active
+- conditions:
+    and:
+      - field: status
+        operator: not_equals
+        value: "active"
+
+# Exclude regions not in list
+- conditions:
+    or:
+      - field: region
+        operator: not_in
+        values:
+          - "us-east-1"
+          - "us-west-2"

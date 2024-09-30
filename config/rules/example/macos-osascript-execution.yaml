@@ -1,0 +1,40 @@
+name: macos-osascript-execution
+uid: bc0c0184-a6a6-4481-af36-c2a5bd5b4b52
+status: experimental
+confidence: low
+enabled: false
+schedule: "0 */2 * * *"
+queryEngine: opensearch.prod
+publishers:
+  - pubsub.test
+  - bigquery.signals
+language: SQL
+query: |
+  SELECT DISTINCT
+    DATE_FORMAT(timestamp, '%Y-%m-%dT%H:%i:%sZ') AS timestamp,
+    CONCAT("process: ", actor.process.file.path, ", process cmdline: ", process.cmd_line) AS message,
+    device.hostname,
+    actor.user.name
+  FROM macos-logs*
+  WHERE process.signing_id LIKE "%osascript%"
+    AND <condition here>
+    AND timestamp >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+output:
+  format: raw
+  fields: []
+description:
+  Adversaries may abuse AppleScript for execution. They may use it to
+  execute various behaviors, such as interacting with an open SSH connection,
+  moving to remote machines, and even presenting users with fake dialog boxes.
+references:
+  - https://www.sentinelone.com/blog/how-offensive-actors-use-applescript-for-attacking-macos/
+  - https://redcanary.com/blog/applescript/
+tags:
+  - macos
+author: adelka
+ttps:
+  - framework: MITRE ATT&CK
+    tactic: Execution
+    name: "Command and Scripting Interpreter: AppleScript"
+    id: T1059.002
+    reference: https://attack.mitre.org/techniques/T1059/002/

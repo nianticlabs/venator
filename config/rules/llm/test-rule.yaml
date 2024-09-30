@@ -1,0 +1,99 @@
+name: llm-test-rule
+uid: 0501222a-3135-4264-b15b-62fd09ab6ff2
+status: test
+confidence: low
+enabled: false
+schedule: "0 0 * * *"
+queryEngine: bigquery.dev
+publishers:
+ - pubsub.alerts
+language: SQL
+query: |
+  SELECT 
+    actor, 
+    resource, 
+    rule_name, 
+    message, 
+    COUNT(*) AS signal_count, 
+    MIN(Timestamp) AS earliest, 
+    MAX(Timestamp) AS latest
+  FROM `test-project.test_dataset.signals`
+  WHERE confidenceID < 3
+    AND TIMESTAMP_MICROS(timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+  GROUP BY actor, resource, rule_name, message
+output:
+  format: raw
+  fields: []
+description: LLM analysis of aggregated low to medium fidelity signals.
+tags:
+  - llm
+author: adelka
+
+# LLM Configuration
+llm:
+  enabled: true
+  prompt: |
+    Analyze the following aggregated signals. Examine the signal names, timestamps, sequence, and details of each record, and try to correlate the signals to assess whether any suspicious activity is present. Provide clear and detailed reasoning for your assessment.
+    
+    **Aggregated Signals:**
+    ```
+    {{ .FormattedResults }}
+    ```
+
+    **Response Format:**
+    - For each signal or correlation of multiple signals that you assess as suspicious with high confidence, return a JSON object containing the fields specified below.
+    - If your confidence in the assessment is low or the data is inconclusive, omit that signal from the response.
+    
+    **Required Fields for Each Suspicious Signal:**
+    - "Title": A concise title for the identified activity.
+    - "Type": "single-stage" or "multi-stage" (in case of potential multi-stage activity identified by correlating multiple signals).
+    - "Confidence": Your confidence level in the assessment. Choose one of the following: "low", "medium", or "high".
+    - "Severity": The potential impact or seriousness of the identified activity. Choose one of the following: "low", "medium", "high", or "severe".
+    - "Message": A detailed explanation of your analysis, including the reasoning behind any suspicious or benign assessment.
+    - "Next_Steps": Recommendations for further investigation or action steps.
+    - Additional Fields:
+      - "User": The entity or user involved.
+      - "Resource": The system or assets affected.
+      - "RawData": A list of stringified signal(s) that were analyzed (multiple signals in case of multi-stage alerts). Ensure that all keys and string values within each signal are enclosed in double quotes to maintain valid JSON syntax.
+
+    **Final Response:**
+    - Return a JSON array of objects, where each object corresponds to a signal or correlated signals you have analyzed with high confidence.
+    - **Output only the JSON array. Do not include any code fences, language tags, or additional formatting.**
+    - Ensure your response is a valid JSON array that can be parsed into a list of maps of strings (i.e., `[]map[string]string`).
+    - Only include signals that are assessed as suspicious with "high" confidence. Omit signals that are confidently assessed as benign, regardless of their confidence level.
+
+    **Sample Response:**
+    [
+      {
+        "Title": "Suspicious Privilege Escalation",
+        "Type": "multi-stage",
+        "Confidence": "high",
+        "Severity": "severe",
+        "Message": "The user 'test-user' executed a suspicious binary and then performed a privilege escalation on MACHINE2.",
+        "Next_Steps": "Investigate the user's activities and check for unauthorized access.",
+        "User": "test-user",
+        "Resource": "MACHINE2",
+        "RawData": [
+          "{\"Signal Name\": \"SuspiciousBinaryExecution\", \"Timestamp\": \"2023-10-10T08:00:00Z\", ...}",
+          "{\"Signal Name\": \"PrivilegeEscalation\", \"Timestamp\": \"2023-10-10T08:05:00Z\", ...}"
+        ]
+      },
+      {
+        "Title": "Potential Data Exfiltration",
+        "Type": "single-stage",
+        "Confidence": "high",
+        "Severity": "high",
+        "Message": "Data was sent to an external server from MACHINE1 by user 'test-user4'.",
+        "Next_Steps": "Verify the data transfer and consider blocking external connections.",
+        "User": "test-user4",
+        "Resource": "MACHINE1",
+        "RawData": [
+          "{\"Signal Name\": \"DataExfiltration\", \"Timestamp\": \"2023-10-10T09:00:00Z\", ...}"
+        ]
+      }
+    ]
+
+    **Guidelines:**
+    - Ensure your response is clear, actionable, and strictly follows the specified JSON format.
+    - **Do not include any code fences, language tags (like `json`), or any additional text outside of the JSON array.**
+    - Base your assessment solely on the information provided in the aggregated signals.

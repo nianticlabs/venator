@@ -1,0 +1,12 @@
+{{ range $path, $_ :=  .Files.Glob  "exclusions/*.yaml" }}
+{{ $cfg := $.Files.Get $path | fromYaml }}
+{{ $name := $path | base | replace ".yaml" ""}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-exclusion
+data:
+  {{ $name }}.yaml: |- 
+{{ $.Files.Get $path | indent 4 }}
+{{ end }}

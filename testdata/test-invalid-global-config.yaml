@@ -1,0 +1,10 @@
+opensearch:
+  # missing instances key
+  instance1:
+    URL: "https://opensearch-instance1.example.com:9200"
+    Username: "admin1"
+    InsecureSkipVerify: false
+  instance2:
+    URL: "https://opensearch-instance2.example.com:9200"
+    Username: "admin2"
+    InsecureSkipVerify: true

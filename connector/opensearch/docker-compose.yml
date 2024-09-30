@@ -1,0 +1,20 @@
+version: '3'
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    environment:
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: dummy-password-9QW7dB4@HD
+      discovery.type: single-node
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+  open-search-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.13.0
+    ports:
+      - "5601:5601"
+    environment:
+      OPENSEARCH_HOSTS: "https://opensearch:9200"
+volumes:
+  opensearch-data:

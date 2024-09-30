@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: global-config
+data:
+  global_config.yaml: |-
+{{ .Files.Get "files/global_config.yaml" | indent 4 }}

@@ -1,0 +1,11 @@
+{{ range $path, $_ :=  .Files.Glob  "rules/**.yaml" }}
+{{ $cfg := $.Files.Get $path | fromYaml }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $cfg.name }}-config
+data:
+  {{ $cfg.name }}.yaml: |- 
+{{ $.Files.Get $path | indent 4 }}
+  {{ end }}
