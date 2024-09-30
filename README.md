@@ -4,26 +4,30 @@
 
 # Venator - Threat Detection Platform
 
-**A cloud-ready, customizable threat detection system with support for scheduled, ad-hoc, and multi-stage detections.**
+**A flexible detection system that simplifies rule management and deployment with Kubernetes CronJobs and Helm.**
 
-Venator is a flexible threat detection platform designed to provide full control over the execution, monitoring, and management of detection rules. By leveraging existing technologies like search engines (OpenSearch, BigQuery) and job schedulers (Kubernetes CronJob, HashiCorp Nomad), Venator offers a highly adaptable detection engine that focuses on simplicity, extensibility, and ease of maintenance.
+Venator is optimized for Kubernetes deployment but is flexible enough to run standalone or with other job schedulers like Nomad. It provides a highly adaptable detection engine that prioritizes simplicity, extensibility, and ease of maintenance. Supporting multiple query engines and publishers, Venator allows you to easily switch between different data lakes or services with minimal changes, avoiding vendor lock-in and dependence on specific SIEM solutions for signal generation.
 
-## Why?
+## Why Venator?
 
-Many existing open-source and commercial threat detection solutions lack the ability to reliably monitor and manage scheduled detection rules. Key limitations include the difficulty of ensuring whether detection jobs ran successfully, the inability to troubleshoot failed jobs, and challenges in running backfills or ad-hoc executions. Moreover, adding new detection rules or supporting additional log sources often leads to unnecessary complexity.
+Many existing open-source and commercial threat detection solutions lack effective tools for monitoring and managing scheduled detection rules. Common challenges include verifying whether detection jobs ran successfully, troubleshooting failed jobs, and running backfills or ad-hoc executions. Moreover, adding new detection rules or integrating new log sources often leads to unnecessary complexity.
 
-Venator was designed to address these gaps by leveraging existing infrastructure for job scheduling and query execution, while also offering a "Detection-as-Code" approach. This allows users to define detection rules as version-controlled YAML files, simplifying the process of rule creation, management, and deployment. Venator provides a lightweight, easy-to-maintain alternative to traditional SIEM detection engines, focusing on simplicity and flexibility without unnecessary complexity.
+## How It Works
 
-### Key Features:
+Venator operates by running each detection rule as an independent job, allowing for flexible query execution and result handling. Each rule uses a query engine (e.g., OpenSearch, BigQuery) to fetch data, process the results, and publish the findings to one or more destinations like BigQuery for signal storage, or PubSub for alerts to trigger your automation system. This modular approach ensures that the failure of one rule doesn’t impact others.
 
-- **Scheduled & Ad-hoc Detections**: Run rules on a scheduled basis or execute them retroactively for historical analysis.
-- **Customizable Detection Languages**: Write detection logic using SQL, PPL, PQL, or other query languages depending on the underlying engine.
-- **Full Monitoring & Control**: Ensure detection jobs run successfully, with built-in support for monitoring job execution, failures, and troubleshooting.
-- **Multi-Stage Detections**: Enable signal correlation and multi-stage detections, offering flexibility for advanced threat detection patterns.
-- **LLM Integration**: Venator can integrate with LLMs for enhanced signal analysis and correlation. This is particularly useful for low to medium fidelity signals that are insufficient for direct alerts.
-- **Cloud-Ready**: Designed to be deployed on any cloud or on-prem infrastructure, leveraging Kubernetes, Helm, and GitLab CI for deployment automation.
-- **Detection-as-Code**: Define, store, and version detection rules in YAML files, making it easy to track changes, automate deployments, and quickly iterate on detection logic.
+### Key Components:
+
+- **Detection Rules**: Detection logic is defined in YAML files. Each rule specifies its own query engine and publishers, making it possible to query different data lakes in parallel or deliver results to different platforms. For example, one rule could query OpenSearch logs and publish alerts to PubSub, while another queries BigQuery and sends results to Slack. You can see some example rules [here](config/rules/).
+  
+- **Job Execution**: Venator schedules and runs each rule as a separate Kubernetes CronJob (or another job scheduler like Nomad). This scheduling allows rules to run at regular intervals (e.g., hourly, daily) or on-demand for ad-hoc queries. Kubernetes handles the lifecycle of these jobs, ensuring each rule runs in isolation.
+
+- **Exclusions**: To reduce false positives, rules can reference exclusion lists, which filter out known benign events from the results before they’re published. These exclusion lists are also defined in YAML and support `and` and `or` conditions with operators like `equals`, `not_equals`, `contains`, `regex`, `in`, and `not_in`. Here is an [example](config/exclusions/example-rule.yaml) exclusion list.
+
+- **LLM Integration**: Venator integrates with Large Language Models (LLMs) to provide enhanced signal analysis. This is particularly useful for analyzing or correlating lower-confidence signals that may not be suitable for immediate alerts.
+
+- **Automated Deployment**: Venator's deployment model uses Helm to automate the process. Helm charts manage configuration files like detection rules, exclusions, and global settings as Kubernetes ConfigMaps. Through a CI/CD pipeline, any changes to detection rules or code automatically trigger new deployments, ensuring the system is always up-to-date without manual intervention.
 
 ## Deployment Guide
 
-For detailed steps on how to deploy Venator using Helm and Kubernetes, including building Docker images, configuring connectors, and setting up detection rules, please refer to the [Deployment Guide](docs/deployment.md).
+For detailed steps on deploying Venator using Helm and Kubernetes, see the [Deployment Guide](docs/deployment.md).
