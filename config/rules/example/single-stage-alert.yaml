@@ -1,12 +1,12 @@
 # Example Rule: Single Stage Alert
 name: single-stage-alert
-uid: 6722b4ed-f891-4906-a4b2-f57762dfc72b  # Unique identifier for the rule
-status: stable  # Current status of the rule (e.g., experimental, stable)
-confidence: high  # Confidence level in the detection logic (e.g., low, medium, high)
-enabled: true  # Set to true to activate the rule
-schedule: "0 */2 * * *"  # Cron expression: Runs every 2 hours
-queryEngine: opensearch.logs  # Query the OpenSearch "logs" instance
-exclusionsPath: app/exclusion/example-exclusion1.yaml  # Path to exclusion rules to filter out known benign events
+uid: 6722b4ed-f891-4906-a4b2-f57762dfc72b
+status: stable
+confidence: high
+enabled: true
+schedule: "0 */2 * * *"
+queryEngine: opensearch.logs
+exclusionsPath: app/exclusion/example-exclusion1.yaml
 publishers:
   - pubsub.alerts  # Publishes alerts to PubSub for triggering security automation or notifications
 language: SQL  # The query language used for the detection logic, depending on the underlying query engine (e.g., SQL, PPL, PQL)
@@ -38,11 +38,11 @@ description:
 references:
   - https://examplelink
 tags:
-  - test  # Tags for categorizing the rule
+  - test
 author: adelka
 ttps:
-  - framework: MITRE ATT&CK  # Reference framework
-    tactic: Persistence  # MITRE tactic
-    name: "Scheduled Task/Job: Cron"  # Technique name
-    id: T1053.003  # MITRE technique ID
-    reference: https://attack.mitre.org/techniques/T1053/003/  # Link to MITRE technique
+  - framework: MITRE ATT&CK
+    tactic: Persistence
+    name: "Scheduled Task/Job: Cron"
+    id: T1053.003
+    reference: https://attack.mitre.org/techniques/T1053/003/

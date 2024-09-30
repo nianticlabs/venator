@@ -1,16 +1,16 @@
 # Example Rule: Stage 2 Signal
 name: stage-2-signal
-uid: f1e2d3c4-b5a6-7890-cdef-gh1234567890  # Unique identifier for the rule
-status: experimental  # Current status of the rule (e.g., experimental, stable)
-confidence: medium  # Confidence level in the detection logic (e.g., low, medium, high)
-enabled: true  # Set to true to activate the rule
-schedule: "0 * * * *"  # Cron expression: Runs every hour
+uid: f1e2d3c4-b5a6-7890-cdef-gh1234567890
+status: experimental
+confidence: medium
+enabled: true
+schedule: "0 * * * *"
 queryEngine: bigquery.signals  # Query the signals database
 exclusionsPath: app/exclusion/example-exclusion2.yaml  # Path to exclusion rules to filter out known benign events
 publishers:
   - bigquery.signals # Publishes the stage-2 signal to the signals database for future correlation/aggregation
   - pubsub.alerts  # Publishes alerts to PubSub for triggering security automation or notifications
-language: SQL  # The query language used for the detection logic, depending on the underlying query engine (e.g., SQL, PPL, PQL)
+language: SQL
 query: |
   SELECT
     MIN(timestamp) AS timestamp,
