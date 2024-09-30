@@ -1,3 +1,7 @@
+<p align="center">
+<img src="docs/images/logo.png" width="200"/>
+</p>
+
 # Venator - Threat Detection Platform
 
 **A cloud-ready, customizable threat detection system with support for scheduled, ad-hoc, and multi-stage detections.**
