@@ -1,0 +1,38 @@
+name: test-rule
+uid: 2001416b-bdd3-4a31-af52-3b1933c4f926
+status: test
+confidence: low
+enabled: true
+schedule: "0 */2 * * *"
+queryEngine: opensearch
+publishers:
+  - opensearch
+  - pubsub
+language: SQL
+query: SELECT * FROM logs
+output:
+  format: signal
+  fields:
+    - field: Field1
+      source: f1
+    - field: Field2
+      source: f2
+description: this is a test rule.
+references:
+  - https://ref1
+  - https://ref2
+tags:
+  - test
+author: adelka
+ttps:
+  - framework: MITRE ATT&CK
+    tactic: tactic1
+    name: technique1
+    id: T111
+    reference: https://example1.com
+  - framework: MITRE ATT&CK
+    tactic: tactic2
+    name: technique2
+    id: T222
+    reference: https://example2.com
+invalid_field: unexpected_value  # This field is not defined in Config struct

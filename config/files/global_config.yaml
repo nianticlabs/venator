@@ -1,0 +1,37 @@
+opensearch:
+  instances:
+    prod:
+      url: https://opensearch:9200
+      username: user
+      password: ${OPENSEARCH_PASSWORD}
+      insecureSkipVerify: true
+    dev:
+      url: https://opensearch-dev:9200
+      username: user
+      password: ${OPENSEARCH_DEV_PASSWORD}
+      insecureSkipVerify: true
+
+pubsub:
+  instances:
+    alerts:
+      projectID: example-project
+      topicID: venator-alerts
+
+bigquery:
+  instances:
+    log-collection:
+      projectID: example-project
+      datasetID: ""
+      tableID: ""
+
+slack:
+  instances:
+    secops-channel:
+      webhookURL: "https://hooks.slack.com/services/EXAMPLEWEBHOOKURL"
+
+llm:
+  provider: "openai"
+  model: ""
+  apiKey: ""
+  serverURL: ""
+  temperature: 0.7

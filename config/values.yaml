@@ -1,0 +1,9 @@
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+container:
+  name: venator-container
+  image: us-central1-docker.pkg.dev/example-project/venator-repo/venator-image:latest
