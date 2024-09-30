@@ -4,7 +4,7 @@
 
 # Venator - Threat Detection Platform
 
-**A flexible detection system that simplifies rule management and deployment with Kubernetes CronJobs and Helm.**
+**A flexible detection system that simplifies rule management and deployment with K8s CronJob and Helm.**
 
 Venator is optimized for Kubernetes deployment but is flexible enough to run standalone or with other job schedulers like Nomad. It provides a highly adaptable detection engine that prioritizes simplicity, extensibility, and ease of maintenance. Supporting multiple query engines and publishers, Venator allows you to easily switch between different data lakes or services with minimal changes, avoiding vendor lock-in and dependence on specific SIEM solutions for signal generation.
 
