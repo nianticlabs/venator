@@ -1,0 +1,48 @@
+# Example Rule: Single Stage Alert
+name: single-stage-alert
+uid: 6722b4ed-f891-4906-a4b2-f57762dfc72b  # Unique identifier for the rule
+status: stable  # Current status of the rule (e.g., experimental, stable)
+confidence: high  # Confidence level in the detection logic (e.g., low, medium, high)
+enabled: true  # Set to true to activate the rule
+schedule: "0 */2 * * *"  # Cron expression: Runs every 2 hours
+queryEngine: opensearch.logs  # Query the OpenSearch "logs" instance
+exclusionsPath: app/exclusion/example-exclusion1.yaml  # Path to exclusion rules to filter out known benign events
+publishers:
+  - pubsub.alerts  # Publishes alerts to PubSub for triggering security automation or notifications
+language: SQL  # The query language used for the detection logic, depending on the underlying query engine (e.g., SQL, PPL, PQL)
+query: |
+  SELECT
+    DATE_FORMAT(timestamp, '%Y-%m-%dT%H:%i:%sZ') AS timestamp,  # Formats the timestamp for consistency
+    CONCAT("Alert: process ", process.name, " executed action on ", device.hostname) AS message,  # Constructs a descriptive message
+    device.hostname,
+    actor.user.name,
+    <other fields>
+  FROM example-logs*  # Queries from indices matching the pattern
+  WHERE <condition>  # Detection logic to identify suspicious activity
+    AND timestamp >= DATE_SUB(NOW(), INTERVAL 2 HOUR)  # Limits the query to the last 2 hours
+  GROUP BY <fields>  # Deduplicates events based on specified fields
+output:
+  format: signal  # Output format: 'signal' for standardized fields or 'raw' for direct output without normalization
+  fields:  # Map query result fields to standardized signal fields (refer to `internal/signal.go` for standard field names), or use [] if format is 'raw'
+    - field: Timestamp  # Normalized field name
+      source: timestamp  # Source field from the query result
+    - field: Message
+      source: message
+    - field: ResourceName
+      source: device.hostname
+    - field: ActorUserName
+      source: actor.user.name
+description:
+  This single-stage alert rule monitors logs in OpenSearch and publishes alerts to PubSub when suspicious activity is detected.
+  Single-stage alerts are designed for high-fidelity and low-volume events that don't require further aggregation or correlation.
+references:
+  - https://examplelink
+tags:
+  - test  # Tags for categorizing the rule
+author: adelka
+ttps:
+  - framework: MITRE ATT&CK  # Reference framework
+    tactic: Persistence  # MITRE tactic
+    name: "Scheduled Task/Job: Cron"  # Technique name
+    id: T1053.003  # MITRE technique ID
+    reference: https://attack.mitre.org/techniques/T1053/003/  # Link to MITRE technique

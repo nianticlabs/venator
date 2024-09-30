@@ -1,0 +1,47 @@
+# Example Rule: Stage 2 Signal
+name: stage-2-signal
+uid: f1e2d3c4-b5a6-7890-cdef-gh1234567890  # Unique identifier for the rule
+status: experimental  # Current status of the rule (e.g., experimental, stable)
+confidence: medium  # Confidence level in the detection logic (e.g., low, medium, high)
+enabled: true  # Set to true to activate the rule
+schedule: "0 * * * *"  # Cron expression: Runs every hour
+queryEngine: bigquery.signals  # Query the signals database
+exclusionsPath: app/exclusion/example-exclusion2.yaml  # Path to exclusion rules to filter out known benign events
+publishers:
+  - bigquery.signals # Publishes the stage-2 signal to the signals database for future correlation/aggregation
+  - pubsub.alerts  # Publishes alerts to PubSub for triggering security automation or notifications
+language: SQL  # The query language used for the detection logic, depending on the underlying query engine (e.g., SQL, PPL, PQL)
+query: |
+  SELECT
+    MIN(timestamp) AS timestamp,
+    user.name,
+    COUNT(*) AS signal_count,
+    ARRAY_AGG(DISTINCT rule_name) AS signals,
+    <other fields>
+  FROM `test-project.test_dataset.signals`
+  WHERE <condition>
+    AND TIMESTAMP_MICROS(timestamp) >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)  # Lookback over the last 24 hours
+  GROUP BY user.name
+  HAVING COUNT(*) > 10  # Threshold for triggering an alert based on a minimum signal count
+output:
+  format: signal  # Output format: 'signal' for standardized fields or 'raw' for direct output without normalization
+  fields:  # Map query result fields to standardized signal fields (refer to `internal/signal.go` for standard field names), or use [] if format is 'raw'
+    - field: ActorUserName  # Normalized field name
+      source: user.name  # Source field from the query result
+    - field: Timestamp
+      source: timestamp
+    # <other fields>
+description:
+  This stage-2 signal (or correlated alert) aggregates signals from the BigQuery signals table and triggers alerts when certain thresholds are exceeded. 
+  Stage-2 correlation is used for low to medium fidelity signals, aggregating multiple events to raise a higher-confidence alert.
+references:
+  - https://examplelink
+tags:
+  - correlated
+author: test-user
+ttps:
+  - framework: MITRE ATT&CK
+    tactic: "Example tactic"
+    name: "Example technique"
+    id: TXXX
+    reference: https://attack.mitre.org/techniques/TXXX/
