@@ -1,53 +1,44 @@
 ## Kubernetes/Helm Deployment Guide
 
-This guide provides steps to deploy Venator on a Kubernetes cluster using Helm. Follow the instructions to set up the environment, build the Docker image, configure Helm, and deploy the application.
+This guide outlines the steps to deploy Venator on a Kubernetes cluster using Helm. Follow these instructions to set up the environment, build the Docker image, configure Helm, and deploy the application.
 
 ### Prerequisites
 
-1. **Configure Cluster Access**  
-   Ensure you have access to your Kubernetes cluster. Authenticate and get credentials for your cluster using the following command:
+- **Kubernetes Cluster**  
+   Ensure you have a Kubernetes cluster set up and configured. You can use any preferred method (e.g., Terraform, GCP Console, etc.) to create the cluster.
+
+- **Cluster Access**  
+   Verify that you have access to your Kubernetes cluster and can authenticate to it. Ensure your `kubectl` context is configured correctly for the target cluster. You can check or switch contexts as needed with:
 
    ```bash
-   gcloud container clusters get-credentials test-cluster --region=us-central1
+   kubectl config get-contexts  # List available contexts
+   kubectl config current-context  # Check the current context
+   kubectl config use-context <context-name>  # Switch to the appropriate context
    ```
 
-   Then, check your current context and switch it if necessary:
-
-   ```bash
-   kubectl config get-contexts          # List available contexts
-   kubectl config current-context       # Check current context
-   kubectl config use-context <context-name>  # Switch to the correct context (replace <context-name> with your cluster's context)
-   ```
-
-2. **Create a Namespace (if not already created)**  
-   To deploy Venator into its own namespace, create a new namespace:
-
-   ```bash
-   kubectl create namespace venator
-   ```
 
 ### Build the Docker Image
 
-To build the Venator Docker image, run the provided example script. This step assumes you're in the root directory containing the Dockerfile, and you're using an Artifact Registry repository named `venator-repo` to store built artifacts.
+Build the Venator Docker image by running the provided script. Ensure you're in the root directory containing the Dockerfile, and that you're using an Artifact Registry repository named `venator-repo` to store the built artifacts:
 
-```bash
-./scripts/build_image.sh
-```
+   ```bash
+   ./scripts/build_image.sh
+   ```
 
-> **Note:** This is a manual build process. Ideally, it should be automated using a CI/CD pipeline like GitLab CI or GitHub Actions.
+> **Note:** This is a manual build process. Automating it via a CI/CD pipeline (like GitLab CI or GitHub Actions) is recommended.
 
-### Create Kubernetes Secrets
+### Create Secrets
 
-If you need to store credentials for your connectors, create Kubernetes secrets using the `scripts/create_secret.sh` or use any other secret manager you prefer. These secrets are referenced in `config/files/global_config.yaml` and `config/templates/cronjob.yaml`. Ensure they are configured correctly.
+If you need to store credentials for your connectors, create Kubernetes secrets using the `scripts/create_secret.sh` script or another secret manager. These secrets are referenced in `config/files/global_config.yaml` and `config/templates/cronjob.yaml`. Ensure they are properly configured.
 
-For example, set the OpenSearch password (if applicable):
+For example, to set the OpenSearch password locally:
 
 ```bash
 read -s -r OPENSEARCH_PASSWORD
 export OPENSEARCH_PASSWORD
 ```
 
-In your `global_config.yaml`, reference the environment variable:
+In `global_config.yaml`, reference the environment variable:
 
 ```yaml
 opensearch:
@@ -59,52 +50,52 @@ opensearch:
       insecureSkipVerify: true
 ```
 
-Ensure the corresponding environment variable is referenced correctly in `config/templates/cronjob.yaml`.
+For Kubernetes deployments, ensure the variable is properly referenced in `config/templates/cronjob.yaml`:
 
 ```yaml
 ...
     env:
     - name: OPENSEARCH_PASSWORD
-        valueFrom:
+      valueFrom:
         secretKeyRef:
-            key: OSPASSWORD
-            name: {{ $.Release.Name }}-secret
+          key: OSPASSWORD
+          name: {{ $.Release.Name }}-secret
 ...
 ```
 
 ### Configure and Install the Helm Chart
 
 1. **Modify the `values.yaml` File**  
-   The Helm chart configuration is located in the `config` directory. Before deploying, modify the `values.yaml` file to reference your Docker image:
+   The Helm chart configuration is located in the `config` directory. Before deploying, update the `values.yaml` file with your Docker image:
 
    ```yaml
    container:
-     image: "your-docker-repo/venator-image:latest"  # Update with your Docker image
+     image: "your-docker-repo/venator-image:latest"  # Replace with your Docker image
    ```
 
 2. **Test Helm Chart Locally (Dry Run)**  
-   Ensure everything is set up correctly by running a Helm template command to test rendering the chart templates:
+   Test the Helm chart to ensure everything is set up correctly:
 
    ```bash
    cd config
-   helm template . --dry-run  # Test rendering chart templates locally
+   helm template . --dry-run  # Test chart rendering locally
    ```
 
-   You can also use the `--debug` flag for more detailed output:
+   Use the `--debug` flag for more detailed output:
 
    ```bash
-   helm install venator-test . --dry-run --debug  # Render the chart locally without installing, checks for resource conflicts
+   helm install venator-test . --dry-run --debug  # Render chart locally without installing, checks for resource conflicts
    ```
 
 3. **Install the Helm Chart**  
-   Once everything looks good, install the Helm chart into the `venator` namespace:
+   Once everything is configured correctly, install the chart in the `venator` namespace:
 
    ```bash
    helm install venator-test . -n venator
    ```
 
 4. **Upgrading the Chart**  
-   To update the Helm chart, use the upgrade command:
+   For updates, use the Helm upgrade command:
 
    ```bash
    helm upgrade venator-test . -n venator
@@ -112,15 +103,50 @@ Ensure the corresponding environment variable is referenced correctly in `config
 
 ### Detection Rules
 
-- Venator detection rules are defined in YAML files located in the `config/rules/` directory. You can apply individual detection rules directly to the cluster:
+- Detection rules are defined as YAML files in the `config/rules/` directory. Using Helm, all enabled rules in this directory (along with exclusion lists and global configurations) are created as ConfigMaps in Kubernetes, and rules are automatically deployed as CronJobs.
+
+Example snippet from `cronjob.yaml`:
+```yaml
+...
+spec:
+  timeZone: "Etc/UTC"
+  schedule: {{ $cfg.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ $.Values.container.name }}
+            imagePullPolicy: Always
+            image: {{ $.Values.container.image }}
+            volumeMounts:
+            - name: rule-volume
+              mountPath: /app/rule
+            - name: config-volume
+              mountPath: /app/config
+            - name: exclusion-volume
+              mountPath: /app/exclusion
+            args:
+              - "--rule-config"
+              - "/app/rule/{{ $cfg.name }}.yaml"
+              - "--global-config"
+              - "/app/config/global_config.yaml"
+...
+```
+
+To manually apply individual detection rules to the cluster without using Helm:
 
    ```bash
-   kubectl apply -f config/rules/example-detection-rule.yaml -n <namespace>
+   kubectl apply -f config/templates/cronjob.yaml -n <namespace>
    ```
 
-- However, when running Helm, this process is automated, and all enabled rules in the `config/rules/` directory are deployed.
+Alternatively, run Venator locally to execute individual rules without deploying to Kubernetes:
 
-- The `config/exclusions/` directory contains exclusion lists to filter false positives. These exclusion lists can be configured in each rule using the `exclusionsPath` field. Example:
+   ```bash
+   ./venator --global-config config/files/global_config.yaml --rule-config config/rules/macos/macos-osascript-execution.yaml
+   ```
+
+- Exclusion lists, located in the `config/exclusions/` directory, help filter false positives. You can reference these exclusion lists in each rule using the `exclusionsPath` field. Example:
 
 ```yaml
 name: example-rule
@@ -141,10 +167,10 @@ language: SQL
 
 ### Final Notes
 
-- **Automation**: While this guide includes manual steps for building and deploying Venator, it is recommended to automate the build and deployment process using a CI/CD tool like GitLab CI or GitHub Actions.
+- **Automation**: Automating the build and deployment process via CI/CD tools like GitLab CI or GitHub Actions is highly recommended. An example [gitlab-ci.yml](../.gitlab-ci.yml) config is provided in the repo.
   
 - **Customization**: Modify the configurations to suit your environment:
-  - Helm configs: `config/values.yaml`, `config/templates/cronjob.yaml`
-  - Venator configs: `config/files/global_config.yaml`, `config/rules/`, and `config/exclusions/`
+  - Helm: `config/values.yaml`, `config/templates/cronjob.yaml`
+  - Venator: `config/files/global_config.yaml`, `config/rules/`, and `config/exclusions/`
 
-- **Testing**: Always test your configuration with `--dry-run` before applying changes to your live environment.
+- **Testing**: Always test your configurations with `--dry-run` before deploying to your live environment.
